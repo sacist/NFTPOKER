@@ -261,6 +261,8 @@ class tableController {
             const user2= await User.findOne({nickname:table.ActionSequence[0]})
             table.playerBets[user1.nickname]=table.blind*2
             table.playerBets[user2.nickname]=table.blind
+            table.maxWinSidePot[user1.nickname]=table.blind*2
+            table.maxWinSidePot[user2.nickname]=table.blind
             user1.balance-=table.blind*2
             user2.balance-=table.blind
             table.currentBet=table.blind*2
@@ -485,8 +487,37 @@ class tableController {
             if (!winner) {
                 return res.status(404).json({ message: 'Winner user not found' });
             }
+            const winnerPot = table.maxWinSidePot[winnerNickname];
+            let hasHigherBet = false;
+            if (table.maxWinSidePot[winnerNickname]) {
+                    for (const player in table.maxWinSidePot) {
+                    if (player !== winnerNickname && table.maxWinSidePot[player] > winnerPot) {
+                        hasHigherBet = true;
+                    }
+                }
+                if (hasHigherBet) {
+                    console.log(table.maxWinSidePot[winnerNickname]*Object.keys(table.maxWinSidePot).length);
+                    
+                    winner.balance+=table.maxWinSidePot[winnerNickname]*Object.keys(table.maxWinSidePot).length
+                    await winner.save()
+                    for(const player in table.maxWinSidePot){
+                        if(player!==winnerNickname){
+                            console.log(player);
+                            
+                            table.maxWinSidePot[player]-=table.maxWinSidePot[winnerNickname]
+                            console.log(table.maxWinSidePot[player]);
+                            
+                            await table.save()
+                            const loser=await User.findOne({nickname:player})
+                            loser.balance+=table.maxWinSidePot[player]
+                            
+                            await loser.save()
+                        }
+                    }
+                }else{winner.balance += table.pot;}
+            
+            }
 
-            winner.balance += table.pot;
             await winner.save();
 
             table.pot = 0;
@@ -539,7 +570,6 @@ class tableController {
                     if (raiseAmount <= table.currentBet) {
                         return res.status(400).json({ message: 'Raise amount must be higher than the current bet' });
                     }
-    
                     if (raiseAmount <= 0 || isNaN(raiseAmount) || raiseAmount > user.balance) {
                         return res.status(400).json({ message: 'Invalid raise amount' });
                     }
@@ -575,9 +605,7 @@ class tableController {
                     table.pot += betAmount;
                     user.balance -= betAmount;
                     table.currentBet = betAmount;
-                    if (table.maxWinSidePot[nickname]) {
-                        table.maxWinSidePot[nickname]+=bet            
-                    }else{table.maxWinSidePot[nickname]=bet}
+                    table.maxWinSidePot[nickname] = (table.maxWinSidePot[nickname] || 0) + betAmount;
                     table.playerBets[nickname] = (table.playerBets[nickname] || 0) + betAmount;
                     table.actionCount = 1;
                     table.lastAction = action;
@@ -630,7 +658,7 @@ class tableController {
             table.currentIndex = (table.currentIndex + 1) % table.ActionSequence.length;
             const nextPlayer = table.ActionSequence[table.currentIndex];
             table.playerTurn = [nextPlayer];
-    
+            table.markModified('maxWinSidePot');
             table.markModified('playerBets');
             await table.save();
             await user.save();
