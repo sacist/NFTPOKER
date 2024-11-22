@@ -53,7 +53,7 @@ export const BettingPanel = ({ tableId, nickname, balance, table, redirect, setR
         }, 2000);
       }
     })()
-  }, [table.gameStarted,table.currentPlayers,focus])
+  }, [table.gameStarted,table.currentPlayers,focused])
 
   const placeRaise = () => handleAction('raise', sliderValue);
   const placeBet = () => handleAction('bet', sliderValue);

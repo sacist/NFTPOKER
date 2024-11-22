@@ -1,8 +1,7 @@
 const Table = require('../models/table')
 const Counter = require('../models/counter');
 const User = require('../models/user')
-const PokerEvaluator = require('poker-evaluator')
-
+const Hand = require("pokersolver").Hand;
 const deck = ['2c', '2d', '2h', '2s', '3c', '3d', '3h', '3s', '4c', '4d', '4h', '4s',
     '5c', '5d', '5h', '5s', '6c', '6d', '6h', '6s', '7c', '7d', '7h', '7s', '8c', '8d',
     '8h', '8s', '9c', '9d', '9h', '9s', 'Tc', 'Td', 'Th', 'Ts', 'Jc', 'Jd', 'Jh', 'Js',
@@ -29,14 +28,14 @@ const revertThings = (table) => {
     table.playerHands = {};
     table.foldedPlayers = [];
     table.lastAction = []
-    table.playerTurn=[]
+    table.playerTurn = []
     table.pot = 0
     table.currentBet = 0
     table.playerBets = {}
     table.actionCount = 0
-    table.currentIndex=0
-    table.allInPlayers=[]
-    table.maxWinSidePot={}
+    table.currentIndex = 0
+    table.allInPlayers = []
+    table.maxWinSidePot = {}
 }
 class tableController {
     async createTable(req, res) {
@@ -187,34 +186,34 @@ class tableController {
                 table.gameStarted = false
             }
             table.playerHands[nickname] = []
-            if (type==='forceQuit'){
+            if (type === 'forceQuit') {
                 const foldingIndex = table.ActionSequence.indexOf(nickname);
-                    table.ActionSequence = table.ActionSequence.filter(player => player !== nickname);
-    
-                    if (table.currentIndex >= table.ActionSequence.length) {
-                        table.currentIndex = -1;
-                    } else if (foldingIndex <= table.currentIndex) {
-                        table.currentIndex -=1
-                    }
-    
-                    if (table.ActionSequence.length === 1) {
-                        const remainingPlayer = table.ActionSequence[0];
-                        const winner = await User.findOne({ nickname: remainingPlayer });
-                        winner.balance += table.pot;
-                        table.pot = 0; 
-                        revertThings(table)
-                        table.gameStarted = false;
+                table.ActionSequence = table.ActionSequence.filter(player => player !== nickname);
 
-                        table.currentPlayers.forEach(player => {
-                            table.playerHands[player] = [];
-                        });
+                if (table.currentIndex >= table.ActionSequence.length) {
+                    table.currentIndex = -1;
+                } else if (foldingIndex <= table.currentIndex) {
+                    table.currentIndex -= 1
+                }
 
-                        await winner.save();
-                    }
-                    table.foldedPlayers = [];
-                    table.currentIndex = (table.currentIndex + 1) % table.ActionSequence.length;
-                    const nextPlayer = table.ActionSequence[table.currentIndex];
-                    table.playerTurn = [nextPlayer];
+                if (table.ActionSequence.length === 1) {
+                    const remainingPlayer = table.ActionSequence[0];
+                    const winner = await User.findOne({ nickname: remainingPlayer });
+                    winner.balance += table.pot;
+                    table.pot = 0;
+                    revertThings(table)
+                    table.gameStarted = false;
+
+                    table.currentPlayers.forEach(player => {
+                        table.playerHands[player] = [];
+                    });
+
+                    await winner.save();
+                }
+                table.foldedPlayers = [];
+                table.currentIndex = (table.currentIndex + 1) % table.ActionSequence.length;
+                const nextPlayer = table.ActionSequence[table.currentIndex];
+                table.playerTurn = [nextPlayer];
             }
             await user.save();
             await table.save();
@@ -227,15 +226,15 @@ class tableController {
     async startGame(req, res) {
         try {
             const { tableId } = req.params;
-    
+
             const table = await Table.findOne({ tableId });
             if (!table) {
                 return res.status(404).json({ message: 'Table not found' });
             }
-    
+
             table.deck = shuffle(deck);
             revertThings(table);
-    
+
             table.currentPlayers.forEach(player => {
                 table.playerHands[player] = [];
                 for (let i = 0; i < 2; i++) {
@@ -244,41 +243,41 @@ class tableController {
                 }
                 table.playerBets[player] = 0;
             });
-    
+
             table.gameStarted = true;
-    
+
             table.roundCount = (table.roundCount + 1) % table.currentPlayers.length;
             const startIndex = table.roundCount;
-    
+
             table.ActionSequence = [
                 ...table.currentPlayers.slice(startIndex),
                 ...table.currentPlayers.slice(0, startIndex),
             ];
-            
+
 
             table.playerTurn = [table.ActionSequence[0]];
-            const user1= await User.findOne({nickname:table.ActionSequence.slice(-1)[0]})
-            const user2= await User.findOne({nickname:table.ActionSequence[0]})
-            table.playerBets[user1.nickname]=table.blind*2
-            table.playerBets[user2.nickname]=table.blind
-            table.maxWinSidePot[user1.nickname]=table.blind*2
-            table.maxWinSidePot[user2.nickname]=table.blind
-            user1.balance-=table.blind*2
-            user2.balance-=table.blind
-            table.currentBet=table.blind*2
-            table.pot+=table.blind*3
-            table.lastAction='bet'
+            const user1 = await User.findOne({ nickname: table.ActionSequence.slice(-1)[0] })
+            const user2 = await User.findOne({ nickname: table.ActionSequence[0] })
+            table.playerBets[user1.nickname] = table.blind * 2
+            table.playerBets[user2.nickname] = table.blind
+            table.maxWinSidePot[user1.nickname] = table.blind * 2
+            table.maxWinSidePot[user2.nickname] = table.blind
+            user1.balance -= table.blind * 2
+            user2.balance -= table.blind
+            table.currentBet = table.blind * 2
+            table.pot += table.blind * 3
+            table.lastAction = 'bet'
             await user1.save()
             await user2.save()
             await table.save();
-    
+
             res.status(200).json(table);
         } catch (e) {
             console.log(e);
             res.status(400).json({ message: 'Failed to start game at table' });
         }
     }
-    
+
 
     async sharedCardsDeal(req, res) {
         try {
@@ -310,8 +309,8 @@ class tableController {
             table.currentBet = 0
             table.playerBets = {}
             table.actionCount = 0
-            table.playerTurn[0]=table.ActionSequence[0]
-            table.currentIndex=0
+            table.playerTurn[0] = table.ActionSequence[0]
+            table.currentIndex = 0
             await table.save()
             res.status(200).json(table)
         } catch (e) {
@@ -424,7 +423,7 @@ class tableController {
 
             table.ActionSequence = table.ActionSequence.filter(player => player !== nickname);
             console.log(table.ActionSequence);
-            
+
 
             if (table.currentIndex >= table.ActionSequence.length) {
                 table.currentIndex = 0;
@@ -432,7 +431,7 @@ class tableController {
                 table.currentIndex = Math.max(0, table.currentIndex - 1);
             }
             console.log(table.currentIndex);
-            
+
 
             // table.playerTurn = [table.ActionSequence[table.currentIndex]];
             await table.save();
@@ -464,58 +463,58 @@ class tableController {
             const handsToDisplay = table.currentPlayers
                 .map((nickname) => ({
                     nickname,
-                    hand: table.playerHands[nickname]
+                    hand: table.playerHands[nickname],
                 }))
                 .filter(({ hand }) => hand && hand.length === 2);
 
-            let bestHand = null;
-            let winnerNickname = null;
-            let winningCards = null;
-            let sharedCards = null
-            handsToDisplay.forEach(({ nickname, hand }) => {
-                const combinedHand = hand.concat(table.flop, table.turn, table.river);
-                const evaluatedHand = PokerEvaluator.evalHand(combinedHand);
-                sharedCards = table.flop.concat(table.turn, table.river)
-                if (!bestHand || evaluatedHand.value > bestHand.value) {
-                    bestHand = evaluatedHand;
-                    winnerNickname = nickname;
-                    winningCards = hand;
-                }
-            });
 
-            const winner = await User.findOne({ nickname: winnerNickname });
+            let bestHands = null;
+            let winnerNicknames = [];
+            let handsToSolve=[]
+            const sharedCards = table.flop.concat(table.turn, table.river);
+
+            for (let i = 0; i < handsToDisplay.length; i++) {
+                handsToSolve.push(Hand.solve(handsToDisplay[i].hand.concat(sharedCards)) )
+            }
+            bestHands=Hand.winners(handsToSolve)  
+                for (let i = 0; i < bestHands.length; i++) {
+                    const bestHandIndex = handsToSolve.findIndex(hand => hand === bestHands[i]);         
+                    winnerNicknames.push(handsToDisplay[bestHandIndex].nickname);
+                }
+            
+            const winner = await User.findOne({ nickname: winnerNicknames[0] });
             if (!winner) {
                 return res.status(404).json({ message: 'Winner user not found' });
             }
-            const winnerPot = table.maxWinSidePot[winnerNickname];
+            const winnerPot = table.maxWinSidePot[winnerNicknames[0]];
             let hasHigherBet = false;
-            if (table.maxWinSidePot[winnerNickname]) {
+            if(winnerNicknames.length===1){
                     for (const player in table.maxWinSidePot) {
-                    if (player !== winnerNickname && table.maxWinSidePot[player] > winnerPot) {
-                        hasHigherBet = true;
-                    }
-                }
-                if (hasHigherBet) {
-                    console.log(table.maxWinSidePot[winnerNickname]*Object.keys(table.maxWinSidePot).length);
-                    
-                    winner.balance+=table.maxWinSidePot[winnerNickname]*Object.keys(table.maxWinSidePot).length
-                    await winner.save()
-                    for(const player in table.maxWinSidePot){
-                        if(player!==winnerNickname){
-                            console.log(player);
-                            
-                            table.maxWinSidePot[player]-=table.maxWinSidePot[winnerNickname]
-                            console.log(table.maxWinSidePot[player]);
-                            
-                            await table.save()
-                            const loser=await User.findOne({nickname:player})
-                            loser.balance+=table.maxWinSidePot[player]
-                            
-                            await loser.save()
+                        if (player !== winnerNicknames[0] && table.maxWinSidePot[player] > winnerPot) {
+                            hasHigherBet = true;
                         }
                     }
-                }else{winner.balance += table.pot;}
-            
+                    if (hasHigherBet) {
+    
+                        winner.balance += table.maxWinSidePot[winnerNicknames[0]] * Object.keys(table.maxWinSidePot).length
+                        await winner.save()
+                        for (const player in table.maxWinSidePot) {
+                            if (player !== winnerNicknames[0]) {  
+                                table.maxWinSidePot[player] -= table.maxWinSidePot[winnerNicknames[0]]
+                                await table.save()
+                                const loser = await User.findOne({ nickname: player })
+                                loser.balance += table.maxWinSidePot[player]
+    
+                                await loser.save()
+                            }
+                        }
+                  } else { winner.balance += table.pot; } 
+            }else{
+                for (let i = 0; i < winnerNicknames.length; i++) {
+                    const user=await User.findOne({nickname:winnerNicknames[i]})
+                    user.balance+=table.pot/winnerNicknames.length
+                    await user.save()
+                }
             }
 
             await winner.save();
@@ -532,9 +531,9 @@ class tableController {
             await table.save();
 
             res.status(200).json({
-                winner: winnerNickname,
-                bestHandName: bestHand.handName,
-                Hand: winningCards,
+                winner: winnerNicknames,
+                // bestHandName: bestHand.handName,
+                Hand: bestHands.descr,
                 sharedCards
                 // winner
             });
@@ -548,22 +547,22 @@ class tableController {
             const { tableId, nickname, action, bet } = req.body;
             const table = await Table.findOne({ tableId });
             const user = await User.findOne({ nickname });
-    
+
             if (!table) return res.status(404).json({ message: 'Table not found' });
             if (!user) return res.status(404).json({ message: 'User not found' });
-    
+
             if (!table.currentPlayers.includes(nickname)) {
                 return res.status(404).json({ message: 'No such player at the table' });
             }
-    
+
             if (!table.gameStarted) {
                 return res.status(408).json({ message: 'Game is not started yet' });
             }
-    
+
             if (table.foldedPlayers.includes(nickname)) {
                 return res.status(409).json({ message: 'Folded players cannot take actions' });
             }
-    
+
             switch (action) {
                 case 'raise':
                     const raiseAmount = bet;
@@ -573,22 +572,23 @@ class tableController {
                     if (raiseAmount <= 0 || isNaN(raiseAmount) || raiseAmount > user.balance) {
                         return res.status(400).json({ message: 'Invalid raise amount' });
                     }
-    
-                    table.pot +=raiseAmount;
+
+                    table.pot += raiseAmount;
                     user.balance -= raiseAmount;
-                    table.maxWinSidePot[nickname] = (table.maxWinSidePot[nickname] || 0) + raiseAmount;      
+                    table.maxWinSidePot[nickname] = (table.maxWinSidePot[nickname] || 0) + raiseAmount;
                     table.currentBet = Math.max(table.currentBet, raiseAmount);
-                    table.playerBets[nickname] = (table.playerBets[nickname] || 0)+raiseAmount;
+                    table.playerBets[nickname] = (table.playerBets[nickname] || 0) + raiseAmount;
                     table.actionCount = 1;
                     table.lastAction = action;
                     break;
-    
+
                 case 'call':
                     let callAmount = table.currentBet - (table.playerBets[nickname] || 0);
                     if (callAmount > user.balance) {
-                        callAmount=user.balance
+                        callAmount = user.balance
+                        table.ActionSequence = table.ActionSequence.filter(player => player !== nickname);
                         table.allInPlayers.push(nickname)
-                        table.maxWinSidePot[nickname]=callAmount+table.playerBets[nickname]
+                        table.maxWinSidePot[nickname] = callAmount + table.playerBets[nickname]
                     }
                     table.pot += callAmount;
                     user.balance -= callAmount;
@@ -596,7 +596,7 @@ class tableController {
                     table.actionCount++;
                     table.lastAction = action;
                     break;
-    
+
                 case 'bet':
                     const betAmount = bet;
                     if (betAmount <= 0 || isNaN(betAmount) || betAmount > user.balance) {
@@ -610,50 +610,50 @@ class tableController {
                     table.actionCount = 1;
                     table.lastAction = action;
                     break;
-    
+
                 case 'check':
-                    if (table.currentBet > 0 && !table.playerBets[nickname]===table.currentBet) {
+                    if (table.currentBet > 0 && !table.playerBets[nickname] === table.currentBet) {
                         return res.status(400).json({ message: 'Cannot check, there is a current bet' });
                     }
                     table.actionCount++;
                     table.lastAction = action;
                     break;
-    
+
                 case 'fold':
                     table.actionCount++;
                     table.lastAction = action;
                     table.playerHands[nickname] = [];
                     table.foldedPlayers.push(nickname);
-    
+
                     const foldingIndex = table.ActionSequence.indexOf(nickname);
                     table.ActionSequence = table.ActionSequence.filter(player => player !== nickname);
-    
+
                     if (table.currentIndex >= table.ActionSequence.length) {
                         table.currentIndex = -1;
                     } else if (foldingIndex <= table.currentIndex) {
-                        table.currentIndex -=1
+                        table.currentIndex -= 1
                     }
-    
+
                     if (table.ActionSequence.length === 1) {
                         const remainingPlayer = table.ActionSequence[0];
                         const winner = await User.findOne({ nickname: remainingPlayer });
                         winner.balance += table.pot;
-                        table.pot = 0; 
+                        table.pot = 0;
                         revertThings(table)
                         table.gameStarted = false;
 
                         await winner.save();
                         await table.save();
                         await user.save();
-                        return res.status(200).json({ message: 'round ended by folding' }); 
-                        
+                        return res.status(200).json({ message: 'round ended by folding' });
+
                     }
                     break;
-    
+
                 default:
                     return res.status(400).json({ message: 'Invalid action' });
             }
-            
+
 
             table.currentIndex = (table.currentIndex + 1) % table.ActionSequence.length;
             const nextPlayer = table.ActionSequence[table.currentIndex];
@@ -662,7 +662,7 @@ class tableController {
             table.markModified('playerBets');
             await table.save();
             await user.save();
-    
+
             return res.json({
                 message: `${nickname} took action: ${action}`,
                 playerTurn: table.playerTurn,
@@ -671,16 +671,20 @@ class tableController {
                 currentBet: table.currentBet,
                 playerBets: table.playerBets,
                 index: table.currentIndex,
-                foldedPlayers: table.foldedPlayers
+                foldedPlayers: table.foldedPlayers,
+                ActionSequence:table.ActionSequence,
+                allInPlayers:table.allInPlayers,
+                currentPlayers:table.currentPlayers,
+
             });
-    
+
         } catch (e) {
             console.log(e);
             res.status(400).json({ message: 'Failed to take action' });
         }
     }
-    
-    
+
+
 
 }
 
