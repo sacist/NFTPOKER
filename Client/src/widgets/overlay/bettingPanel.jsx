@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTabFocus } from '../../hooks/useTabFocus';
 
 export const BettingPanel = ({ tableId, nickname, balance, table, redirect, setRedirect, turn, gameStarted }) => {
-  const [sliderValue, setSliderValue] = useState(0);
+  const [sliderValue, setSliderValue] = useState('');
   const [isHovered, setIsHovered] = useState(false);
   const navigate = useNavigate();
   const firstRender=useRef(true)
@@ -15,12 +15,15 @@ export const BettingPanel = ({ tableId, nickname, balance, table, redirect, setR
   };
 
   const onInputChange = (e) => {
-    const value = Math.max(0, Math.min(1000, Number(e.target.value)));
-    setSliderValue(value);
+    const value = e.target.value
+    if (value === '' || /^[0-9]*\.?[0-9]*$/.test(value)) {
+      setSliderValue(value);
+    }
 
   };
 
   const handleAction = async (action, betAmmount = 0) => {
+    setSliderValue('')
     try {
       const response = await takeAction(tableId, nickname, action, betAmmount);
 
@@ -55,12 +58,12 @@ export const BettingPanel = ({ tableId, nickname, balance, table, redirect, setR
     })()
   }, [table.gameStarted,table.currentPlayers,focused])
 
-  const placeRaise = () => handleAction('raise', sliderValue);
-  const placeBet = () => handleAction('bet', sliderValue);
+  const placeRaise = () => handleAction('raise', +sliderValue);
+  const placeBet = () => handleAction('bet', +sliderValue);
   const check = () => handleAction('check', 0);
   const callBet = () => {
     const callAmount = table.currentBet - (table.playerBets.nickname || 0);
-      handleAction('call', callAmount);
+      handleAction('call', +callAmount);
   };
 
   const foldCards = async () => {
@@ -89,6 +92,7 @@ export const BettingPanel = ({ tableId, nickname, balance, table, redirect, setR
           value={sliderValue}
           onChange={onSliderChange}
           min={0}
+          step={0.1}
           max={balance}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
@@ -97,9 +101,11 @@ export const BettingPanel = ({ tableId, nickname, balance, table, redirect, setR
           type="text"
           value={sliderValue}
           onChange={onInputChange}
+          step={0.1}
           min={0}
           max={balance}
           $isHovered={isHovered}
+          placeholder='0'
         />
       </SliderWrapper>
       <Panel>

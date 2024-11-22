@@ -112,6 +112,9 @@ export const Table = () => {
 
     return () => clearInterval(interval);
   }, [tableId, nickname, otherPlayers, user, table]);
+  const roundToTwoDecimals = (num) => {
+    return Math.round((num + Number.EPSILON) * 100) / 100;
+  };
   // useEffect(()=>{
   //   if(table?.ActionSequence.length===1){
   //     shipWinnings(tableId,table.ActionSequence[0])
@@ -124,7 +127,7 @@ export const Table = () => {
         <>
           <Player1Wrapper>
             <CurrentBet>
-            {table.playerBets?.[nickname] ? (`$${table.playerBets[nickname]}`):(null)}
+            {table.playerBets?.[nickname] ? (`$${roundToTwoDecimals(table.playerBets[nickname])}`):(null)}
             </CurrentBet>
             <PlayerCardWrapper>
               {(!foldedPlayers.includes(nickname) && isGameStarted) ? (
@@ -142,7 +145,7 @@ export const Table = () => {
             </PlayerCardWrapper>
             <PlayerInfoWrapper $isGlowing={playerTurn===nickname}>
               <PlayerInfo fontSize={30}>{nickname}</PlayerInfo>
-              <PlayerInfo fontSize={20}>${user.balance}</PlayerInfo>
+              <PlayerInfo fontSize={20}>${roundToTwoDecimals(user.balance)}</PlayerInfo>
             </PlayerInfoWrapper>
           </Player1Wrapper>
 
@@ -168,10 +171,10 @@ export const Table = () => {
               </PlayerCardWrapper>
               <PlayerInfoWrapper $isGlowing={playerTurn===player}>
                 <PlayerInfo fontSize={30}>{player}</PlayerInfo>
-                <PlayerInfo fontSize={20}>${playersBalances[player] || 0}</PlayerInfo>
+                <PlayerInfo fontSize={20}>${roundToTwoDecimals(playersBalances[player]) || 0}</PlayerInfo>
               </PlayerInfoWrapper>
               <CurrentBet style={{ marginLeft: i >= 3 ? '-130px' : '130px' }}>
-                {table.playerBets?.[player] ? (`$${table.playerBets[player]}`):(null)}
+                {table.playerBets?.[player] ? (`$${roundToTwoDecimals(table.playerBets[player])}`):(null)}
               </CurrentBet>
             </PlayerWrapper>
           ))}
@@ -187,7 +190,7 @@ export const Table = () => {
                 </>
               )}
             </SharedCardsWrapper>
-            <PotAmount>{`$${pot || 0}`}</PotAmount>
+            <PotAmount>{`$${roundToTwoDecimals(pot) || 0}`}</PotAmount>
           </SharedWrapper>
           <Overlay tableId={tableId}
             nickname={nickname}
