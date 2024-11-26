@@ -7,10 +7,10 @@ require('dotenv').config()
 
 const app = express()
 
-const port = 5000
+const port = 3010
 
 let corsOptions = {
-    origin: ['http://localhost:5173'],
+    origin: ['http://localhost:3002'],
     credentials:true,
 }
 app.use(cookieParser())

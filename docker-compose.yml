@@ -1,0 +1,16 @@
+services:
+  backend:
+    build:
+      context: ./server
+    ports:
+      - "3010:3010"
+    volumes:
+      - ./server:/server
+    command: ["node", "app.js"]
+
+  frontend:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    ports:
+      - "3002:88"

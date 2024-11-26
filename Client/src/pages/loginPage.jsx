@@ -32,6 +32,7 @@ export const LoginPage=() => {
     }
 
 
+
   return(
     <LoginWrapper>
         <Wrapper2>

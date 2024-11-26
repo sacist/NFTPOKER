@@ -2,7 +2,7 @@ import axios from 'axios'
 import { act } from 'react';
 
 
-const URL='http://localhost:5000'
+const URL='http://localhost:3010'
 
 const axiosInstance = axios.create({
     baseURL: URL,

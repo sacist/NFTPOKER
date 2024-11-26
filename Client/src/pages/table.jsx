@@ -7,10 +7,10 @@ import tableTexture from '../assets/openart-image_zYxX74fa_1730800015204_raw.png
 import { Overlay } from '../widgets/overlay/overlay';
 import { deepEqual } from '../functions/deepEqual';
 import cardBack from '../assets/cardBack.png'
-import spades from '../assets/spades.svg'
-import clubs from '../assets/clubs.svg'
-import diamonds from '../assets/diamonds.svg'
-import hearts from '../assets/hearts.svg'
+import spades from '/spades.svg'
+import clubs from '/clubs.svg'
+import diamonds from '/diamonds.svg'
+import hearts from '/hearts.svg'
 
 export const Table = () => {
   const [table, setTable] = useState(null);
