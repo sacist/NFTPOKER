@@ -2,9 +2,10 @@ import axios from 'axios'
 
 
 const URL='http://localhost:3010'
+const URL_Deploy='http://79.141.65.35:3010'
 
 const axiosInstance = axios.create({
-    baseURL: URL,
+    baseURL: URL_Deploy,
     withCredentials: true,
   });
 

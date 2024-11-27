@@ -10,7 +10,7 @@ const app = express()
 const port = 3010
 
 let corsOptions = {
-    origin: ['http://localhost:3002'],
+    origin: ['http://localhost:3002','http://79.141.65.35:3002'],
     credentials:true,
 }
 app.use(cookieParser())
