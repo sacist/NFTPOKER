@@ -1,4 +1,18 @@
+networks:
+  poker:
+
+
+
 services:
+  nginx:
+    image: nginx:stable-alpine
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - poker
+
+
   backend:
     build:
       context: ./server
@@ -7,6 +21,8 @@ services:
     volumes:
       - ./server:/server
     command: ["node", "app.js"]
+    networks:
+      - poker
 
   frontend:
     build:
@@ -14,3 +30,5 @@ services:
       dockerfile: Dockerfile
     ports:
       - "3002:88"
+    networks:
+      - poker
